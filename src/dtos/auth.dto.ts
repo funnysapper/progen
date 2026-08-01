@@ -6,7 +6,11 @@ export const loginSchema = z.object({
 })
 
 export const registerSchema = z.object({
-    name: z.string().min(2, 'Name should be at least 2 characters long').max(100),
+    name: z.string()
+        .trim()
+        .min(2, 'Name should be at least 2 characters long')
+        .max(100)
+        .regex(/^\p{L}[\p{L}\p{M} .'-]*$/u, 'Name may only contain letters, spaces, hyphens and apostrophes'),
     email: z.string().email(),
     password: z.string().min(8, 'Password should be at least 8 characters long'),
 })

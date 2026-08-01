@@ -64,7 +64,7 @@ export class AuthService{
 
 
     private async issueTokens(userId: string, role: Role){
-        const accessToken = jwt.sign({userId, role}, env.JWT_ACCESS_TOKEN, {expiresIn: '15m'});
+        const accessToken = jwt.sign({userId, role}, env.JWT_ACCESS_TOKEN, {expiresIn: '1h'});
         const refreshToken = jwt.sign({userId, role}, env.JWT_REFRESH_TOKEN, {expiresIn:'7d'});
         await this.userRepo.storeRefreshToken(refreshToken, userId,  new Date(Date.now() + REFRESH_TTL_MS));
         return {accessToken, refreshToken};

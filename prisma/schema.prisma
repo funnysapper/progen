@@ -50,16 +50,26 @@ model User{
   refreshToken RefreshToken[]
 }
 
+enum ResumeSource{
+  UPLOAD
+  PASTED
+}
+
 model Resume{
   id String @id @default(uuid())
   user User @relation(fields:[userId], references:[id])
   userId String
-  originalFileName String
-  filePath String
+  source ResumeSource @default(UPLOAD)
+  originalFileName String?
+  filePath String?
   plainText String @db.Text
+  contentHash String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   aiRequests AIRequest[]
+
+  // A user cannot store the same CV text twice.
+  @@unique([userId, contentHash])
 }
 
 model JobDescription{
@@ -79,6 +89,7 @@ model PromptTemplate{
   name String
   promptType PromptType @default(JOB_PROPOSAL)
   templateText String @db.Text
+  fields Json?           // the questions shown to the user for this template
   active Boolean @default(true)
   version Int
   createdAt DateTime @default(now())
@@ -96,6 +107,7 @@ model AIRequest{
   jobDescriptionId String
   template PromptTemplate @relation(fields:[templateId], references:[id])
   templateId String
+  inputs Json?           // the user's answers to the template questions
   aiResponse AIResponse?
   status Status @default(PENDING)
   createdAt DateTime @default(now())
