@@ -8,8 +8,6 @@ import { UserRepo } from '../repos/user.repo';
 import type { TemplateField } from '../template/template.service';
 import { BadRequestError, NotFoundError, AppError } from '../error';
 
-// Max AI requests a single user may have running at once. Guards the free-tier
-// rate limit against a user firing many simultaneous generations.
 const MAX_IN_FLIGHT = 3;
 
 export class ProposalService {
@@ -33,7 +31,6 @@ export class ProposalService {
       throw new BadRequestError('You already have generations in progress. Please wait for them to finish.');
     }
 
-    // 2. Load and authorize inputs (all owner-scoped).
     const [resume, jobDescription, user] = await Promise.all([
       this.resumeRepo.findByIdForUser(resumeId, userId),
       this.jobDescriptionRepo.findByIdForUser(jobDescriptionId, userId),
@@ -42,7 +39,7 @@ export class ProposalService {
     if (!resume) throw new NotFoundError('Resume not found');
     if (!jobDescription) throw new NotFoundError('Job description not found');
 
-    // 3. Load the prompt template — by id if given, else the active JOB_PROPOSAL.
+   
     const template = options.templateId
       ? await this.promptTemplateRepo.findActiveById(options.templateId)
       : await this.promptTemplateRepo.findActiveByType('JOB_PROPOSAL');
@@ -52,7 +49,6 @@ export class ProposalService {
         : new AppError(500, 'No active prompt template configured. Run the seed script.');
     }
 
-    // 3b. Validate the user's answers against the template's questions.
     const fields = (template.fields as unknown as TemplateField[]) ?? [];
     const answers = options.answers ?? {};
     const missing = fields
@@ -62,7 +58,6 @@ export class ProposalService {
       throw new BadRequestError(`Please answer the required questions: ${missing.join(', ')}`);
     }
 
-    // 4. Record the request (auditable, and lets us flip to async later).
     const request = await this.aiRequestRepo.create({
       userId,
       resumeId,

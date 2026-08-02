@@ -1,5 +1,6 @@
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
+import { randomUUID } from "crypto";
 import {env} from "../config/env";
 import {OAuth2Client} from "google-auth-library";
 import { UserRepo } from "../repos/user.repo";
@@ -65,7 +66,9 @@ export class AuthService{
 
     private async issueTokens(userId: string, role: Role){
         const accessToken = jwt.sign({userId, role}, env.JWT_ACCESS_TOKEN, {expiresIn: '1h'});
-        const refreshToken = jwt.sign({userId, role}, env.JWT_REFRESH_TOKEN, {expiresIn:'7d'});
+        // jti (a random id) makes every refresh token string unique, so two tokens
+        // issued in the same second can never collide on the unique `token` column.
+        const refreshToken = jwt.sign({userId, role, jti: randomUUID()}, env.JWT_REFRESH_TOKEN, {expiresIn:'7d'});
         await this.userRepo.storeRefreshToken(refreshToken, userId,  new Date(Date.now() + REFRESH_TTL_MS));
         return {accessToken, refreshToken};
     }

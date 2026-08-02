@@ -1,4 +1,5 @@
 import express from 'express';
+import cors from 'cors';
 import {errorHandler} from './middleware/errorhandler';
 import authRouter from './auth/auth.route';
 import resumeRouter from './resume/resume.route';
@@ -7,6 +8,11 @@ import proposalRouter from './proposal/proposal.route';
 import templateRouter from './template/template.route';
 import morgan from "morgan";
 const app = express();
+// Allow the React dev frontend (Vite) to call the API from the browser.
+app.use(cors({
+  origin: (process.env.CORS_ORIGIN ?? 'http://localhost:5173').split(','),
+  credentials: true,
+}));
 app.use(express.json());
 app.use(morgan("dev"));           
 app.get('/health', (_req,res)=> {

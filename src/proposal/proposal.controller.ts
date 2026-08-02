@@ -13,7 +13,6 @@ export class ProposalController {
     private jobDescriptionService: JobDescriptionService
   ) {}
 
-  // Granular: caller already has stored resumeId + jobDescriptionId.
   create = async (req: Request, res: Response) => {
     const parsed = generateProposalSchema.safeParse(req.body);
     if (!parsed.success) {
@@ -28,12 +27,9 @@ export class ProposalController {
     return res.status(201).json(result);
   };
 
-  // All-in-one (form flow): CV (file OR resumeText) + job + answers in one
-  // multipart request. Stores the resume and job, then generates.
   generateAll = async (req: Request, res: Response) => {
     const userId = req.user!.userId;
 
-    // answers arrives as a JSON string in multipart form-data.
     const answers = this.parseAnswers(req.body.answers);
 
     const parsed = generateAllSchema.safeParse(req.body);
@@ -41,7 +37,6 @@ export class ProposalController {
       throw new BadRequestError('Validation failed', parsed.error.flatten().fieldErrors);
     }
 
-    // Resolve the CV: uploaded file wins, else pasted text, else error.
     let resumeId: string;
     if (req.file) {
       const resume = await this.resumeService.createFromFile(userId, req.file);
@@ -77,7 +72,6 @@ export class ProposalController {
     return res.json(request);
   };
 
-  // Download the generated proposal as a PDF.
   downloadPdf = async (req: Request, res: Response) => {
     const id = String(req.params.id);
     const request = await this.service.getForUser(id, req.user!.userId);

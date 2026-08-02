@@ -12,7 +12,7 @@ export interface TemplateField {
   placeholder?: string;
 }
 
-// Returns only what the frontend needs — never the internal prompt text.
+
 function toPublicView(t: PromptTemplate) {
   return {
     id: t.id,

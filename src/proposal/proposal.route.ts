@@ -27,10 +27,7 @@ const proposalRouter = Router();
 
 proposalRouter.use(authenticate);
 
-// All-in-one form flow (CV file optional + job + answers in one request).
 proposalRouter.post('/generate', upload.single('file'), controller.generateAll);
-
-// Granular flow (caller already has stored resume + job ids).
 proposalRouter.post('/', controller.create);
 proposalRouter.get('/', controller.list);
 proposalRouter.get('/:id/pdf', controller.downloadPdf);
