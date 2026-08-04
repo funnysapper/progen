@@ -39,6 +39,13 @@ async function parse(res: Response) {
   return body;
 }
 
+// Called when the session is unrecoverable (refresh failed). Clears tokens and
+// notifies the app so it can send the user back to the login screen.
+export function forceLogout() {
+  tokenStore.clear();
+  window.dispatchEvent(new Event('auth:logout'));
+}
+
 async function tryRefresh(): Promise<boolean> {
   const refreshToken = tokenStore.refresh;
   if (!refreshToken) return false;
@@ -80,9 +87,12 @@ export async function api(path: string, opts: RequestOptions = {}): Promise<any>
 
   let res = await fetch(`${BASE_URL}${path}`, build());
 
-  // One transparent retry after refreshing an expired access token.
-  if (res.status === 401 && auth && (await tryRefresh())) {
-    res = await fetch(`${BASE_URL}${path}`, build());
+  // One transparent retry after refreshing an expired access token. If the
+  // refresh fails (or the retry is still 401), the session is dead → log out.
+  if (res.status === 401 && auth) {
+    const refreshed = await tryRefresh();
+    if (refreshed) res = await fetch(`${BASE_URL}${path}`, build());
+    if (!refreshed || res.status === 401) forceLogout();
   }
 
   return parse(res);
@@ -93,9 +103,13 @@ export async function apiDownload(path: string): Promise<Blob> {
   const headers: Record<string, string> = {};
   if (tokenStore.access) headers.Authorization = `Bearer ${tokenStore.access}`;
   let res = await fetch(`${BASE_URL}${path}`, { headers });
-  if (res.status === 401 && (await tryRefresh())) {
-    headers.Authorization = `Bearer ${tokenStore.access}`;
-    res = await fetch(`${BASE_URL}${path}`, { headers });
+  if (res.status === 401) {
+    const refreshed = await tryRefresh();
+    if (refreshed) {
+      headers.Authorization = `Bearer ${tokenStore.access}`;
+      res = await fetch(`${BASE_URL}${path}`, { headers });
+    }
+    if (!refreshed || res.status === 401) forceLogout();
   }
   if (!res.ok) throw new ApiError(res.status, 'Download failed');
   return res.blob();

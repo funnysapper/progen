@@ -32,5 +32,6 @@ proposalRouter.post('/', controller.create);
 proposalRouter.get('/', controller.list);
 proposalRouter.get('/:id/pdf', controller.downloadPdf);
 proposalRouter.get('/:id', controller.getOne);
+proposalRouter.delete('/:id', controller.remove);
 
 export default proposalRouter;

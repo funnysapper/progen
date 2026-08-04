@@ -1,0 +1,107 @@
+.sidebar {
+  width: 280px;
+  flex: none;
+  border-right: 1px solid var(--border);
+  background: #fff;
+  padding: 20px 16px;
+  height: calc(100vh - 65px);
+  overflow: auto;
+  position: sticky;
+  top: 65px;
+}
+
+.title {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: var(--muted);
+  text-transform: uppercase;
+  margin-bottom: 12px;
+}
+
+.search {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  padding: 8px 12px;
+  margin-bottom: 14px;
+  outline: none;
+}
+.search:focus {
+  border-color: var(--accent);
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.item {
+  position: relative;
+  text-align: left;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 34px 12px 12px;
+  cursor: pointer;
+}
+.item:hover {
+  border-color: var(--accent);
+}
+.itemDisabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.del {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 26px;
+  height: 26px;
+  border: none;
+  background: transparent;
+  border-radius: 7px;
+  color: var(--muted);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.15s, background 0.15s, color 0.15s;
+}
+.item:hover .del {
+  opacity: 1;
+}
+.del:hover {
+  background: rgba(179, 38, 30, 0.1);
+  color: var(--danger);
+}
+.del svg {
+  width: 15px;
+  height: 15px;
+}
+.itemTitle {
+  font-weight: 700;
+  font-size: 14px;
+  margin-bottom: 4px;
+}
+.snippet {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.4;
+  margin-bottom: 6px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.date {
+  color: var(--muted);
+  font-size: 11px;
+}
+.empty {
+  color: var(--muted);
+  font-size: 13px;
+  padding: 20px 4px;
+}

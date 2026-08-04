@@ -23,14 +23,14 @@ export class ProposalService {
     userId: string,
     resumeId: string,
     jobDescriptionId: string,
-    options: { templateId?: string; answers?: Record<string, string> } = {}
+    options: {
+      templateId?: string;
+      answers?: Record<string, string>;
+      tone?: string;
+      length?: number;
+      force?: boolean;
+    } = {}
   ) {
-    // 1. Concurrency guard.
-    const inFlight = await this.aiRequestRepo.countInFlight(userId);
-    if (inFlight >= MAX_IN_FLIGHT) {
-      throw new BadRequestError('You already have generations in progress. Please wait for them to finish.');
-    }
-
     const [resume, jobDescription, user] = await Promise.all([
       this.resumeRepo.findByIdForUser(resumeId, userId),
       this.jobDescriptionRepo.findByIdForUser(jobDescriptionId, userId),
@@ -39,7 +39,20 @@ export class ProposalService {
     if (!resume) throw new NotFoundError('Resume not found');
     if (!jobDescription) throw new NotFoundError('Job description not found');
 
-   
+    // One proposal per (CV + job). If this exact pair already has a successful
+    // proposal, return it instead of creating a duplicate — unless the caller
+    // explicitly regenerates (force), which overwrites the same record.
+    const existing = await this.aiRequestRepo.findByCombo(userId, resumeId, jobDescriptionId);
+    if (existing && existing.status === 'SUCCESS' && existing.aiResponse && !options.force) {
+      return {
+        requestId: existing.id,
+        status: 'SUCCESS' as const,
+        proposal: existing.aiResponse.generatedText,
+        responseId: existing.aiResponse.id,
+        reused: true,
+      };
+    }
+
     const template = options.templateId
       ? await this.promptTemplateRepo.findActiveById(options.templateId)
       : await this.promptTemplateRepo.findActiveByType('JOB_PROPOSAL');
@@ -58,13 +71,23 @@ export class ProposalService {
       throw new BadRequestError(`Please answer the required questions: ${missing.join(', ')}`);
     }
 
-    const request = await this.aiRequestRepo.create({
-      userId,
-      resumeId,
-      jobDescriptionId,
-      templateId: template.id,
-      inputs: answers,
-    });
+    // Concurrency guard — only when we're actually going to call the AI.
+    const inFlight = await this.aiRequestRepo.countInFlight(userId);
+    if (inFlight >= MAX_IN_FLIGHT) {
+      throw new BadRequestError('You already have generations in progress. Please wait for them to finish.');
+    }
+
+    // Reuse the existing record on regenerate; otherwise create a fresh one.
+    const request =
+      existing ??
+      (await this.aiRequestRepo.create({
+        userId,
+        resumeId,
+        jobDescriptionId,
+        templateId: template.id,
+        inputs: answers,
+      }));
+    if (existing) await this.aiRequestRepo.updateInputs(existing.id, answers);
 
     try {
       await this.aiRequestRepo.updateStatus(request.id, 'PROCESSING');
@@ -76,6 +99,8 @@ export class ProposalService {
         companyName: jobDescription.company,
         jobDescription: jobDescription.description,
         additionalInfo: this.formatAnswers(fields, answers),
+        tone: options.tone ?? 'Professional',
+        length: String(options.length ?? 300),
       });
 
       const completion = await ai.chat.completions.create({
@@ -89,7 +114,7 @@ export class ProposalService {
         throw new Error('The AI returned an empty response');
       }
 
-      const response = await this.aiRequestRepo.createResponse(request.id, generatedText);
+      const response = await this.aiRequestRepo.upsertResponse(request.id, generatedText);
       await this.aiRequestRepo.updateStatus(request.id, 'SUCCESS');
 
       return {
@@ -97,6 +122,7 @@ export class ProposalService {
         status: 'SUCCESS' as const,
         proposal: generatedText,
         responseId: response.id,
+        reused: false,
       };
     } catch (err) {
       await this.aiRequestRepo.updateStatus(request.id, 'FAILED');
@@ -114,6 +140,11 @@ export class ProposalService {
     const request = await this.aiRequestRepo.findByIdForUser(id, userId);
     if (!request) throw new NotFoundError('Proposal request not found');
     return request;
+  }
+
+  async deleteForUser(id: string, userId: string) {
+    const deleted = await this.aiRequestRepo.deleteForUser(id, userId);
+    if (!deleted) throw new NotFoundError('Proposal not found');
   }
 
   // Replaces {{placeholders}} in the template with the user's real data.

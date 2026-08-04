@@ -16,4 +16,9 @@ export class JobDescriptionRepo {
   findByIdForUser(id: string, userId: string) {
     return prisma.jobDescription.findFirst({ where: { id, userId } });
   }
+
+  // Used for de-duplication: same user + identical job posting.
+  findByContent(userId: string, title: string, company: string, description: string) {
+    return prisma.jobDescription.findFirst({ where: { userId, title, company, description } });
+  }
 }

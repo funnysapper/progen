@@ -1,70 +1,80 @@
 import { useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
-import { Button, Card, ErrorNote, Field, Input } from '../components/ui';
+import { Button, Input } from '../components/ui';
+import { GoogleAuth } from '../components/GoogleAuth';
+import { useToast } from '../components/toast';
 import { ApiError } from '../api/client';
 import s from './auth.module.css';
 
 export default function Login() {
-  const { login } = useAuth();
+  const { login, loginWithGoogle } = useAuth();
   const navigate = useNavigate();
+  const toast = useToast();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
-    setError('');
     setLoading(true);
     try {
       await login(email, password);
-      navigate('/app');
+      toast.success('Welcome back!');
+      navigate('/');
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Something went wrong');
+      toast.error(err instanceof ApiError ? err.message : 'Something went wrong');
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <div className={s.wrap}>
-      <div className={s.panel}>
-        <div className={s.brand}>
-          <h1>ProGen</h1>
-          <p>Write the perfect proposal in seconds</p>
-        </div>
-        <Card>
-          <h2 className={s.title}>Welcome back</h2>
+    <div className={s.split}>
+      <div className={`${s.imageSide} ${s.imgSignin}`} />
+      <div className={s.formSide}>
+        <div className={s.formInner}>
+          <div className={s.brand}>
+            Pro<span>Gen</span>
+          </div>
+          <h1 className={s.title}>Welcome Back!</h1>
+
+          <GoogleAuth
+            label="Sign in with"
+            run={loginWithGoogle}
+            onDone={() => {
+              toast.success('Signed in with Google');
+              navigate('/');
+            }}
+            onError={toast.error}
+          />
+
           <form onSubmit={onSubmit}>
-            {error && <ErrorNote>{error}</ErrorNote>}
-            <div style={{ height: error ? 12 : 0 }} />
-            <Field label="Email">
+            <div className={s.fields}>
               <Input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@example.com"
+                placeholder="you@email.com"
                 required
               />
-            </Field>
-            <Field label="Password">
               <Input
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
+                placeholder="Password"
                 required
               />
-            </Field>
+            </div>
             <Button type="submit" block loading={loading}>
-              Log in
+              Sign in
             </Button>
           </form>
+
           <p className={s.foot}>
-            New here? <Link to="/register">Create an account</Link>
+            Don't have an account? <Link to="/register">Sign up</Link>
           </p>
-        </Card>
+        </div>
       </div>
     </div>
   );

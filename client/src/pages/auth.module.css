@@ -1,48 +1,121 @@
-.wrap {
-  min-height: 100%;
+.split {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  background: #fff;
+}
+
+/* Left image panel — inset with white space around it and rounded corners.
+   Drop client/public/signin.jpg & signup.jpg to replace the gradient fallback. */
+.imageSide {
+  margin: 24px;
+  border-radius: 22px;
+  background: linear-gradient(135deg, #31081f, #7a1f4f);
+  background-size: cover;
+  background-position: center;
+}
+.imgSignin {
+  background: url('/signin.jpg') center / cover no-repeat, linear-gradient(135deg, #31081f, #7a1f4f);
+}
+.imgSignup {
+  background: url('/signup.jpg') center / cover no-repeat, linear-gradient(135deg, #31081f, #7a1f4f);
+}
+
+.formSide {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--plum);
-  padding: 24px;
+  padding: 48px 40px;
+  background: #fff;
 }
-
-.panel {
+.formInner {
   width: 100%;
   max-width: 400px;
 }
 
 .brand {
-  text-align: center;
-  margin-bottom: 20px;
-  color: #fff;
-}
-
-.brand h1 {
-  font-size: 26px;
   font-weight: 800;
+  font-size: 22px;
   letter-spacing: -0.5px;
+  color: var(--plum);
+  margin-bottom: 28px;
 }
-
-.brand p {
-  color: rgba(255, 255, 255, 0.7);
-  font-size: 14px;
-  margin-top: 4px;
+.brand span {
+  color: #b9a7b0;
 }
 
 .title {
-  font-size: 18px;
-  margin-bottom: 18px;
+  font-size: 38px;
+  letter-spacing: -1px;
+  margin-bottom: 22px;
+}
+
+.sub {
+  font-size: 13px;
+  color: var(--muted);
+  margin-bottom: 10px;
+}
+
+.fields {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 4px 0 18px;
 }
 
 .foot {
-  text-align: center;
-  margin-top: 16px;
-  font-size: 13px;
+  margin-top: 18px;
+  font-size: 14px;
   color: var(--muted);
 }
-
 .foot a {
   color: var(--accent);
+  font-weight: 700;
+}
+
+.googleBtn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 11px 16px;
   font-weight: 600;
+  color: var(--text);
+  cursor: pointer;
+}
+.googleBtn:hover {
+  background: var(--bg);
+}
+.googleG {
+  display: inline-flex;
+  line-height: 0;
+}
+
+.divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 18px 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+.divider::before,
+.divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+@media (max-width: 820px) {
+  .split {
+    grid-template-columns: 1fr;
+  }
+  .imageSide {
+    display: none;
+  }
 }

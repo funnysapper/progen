@@ -1,0 +1,83 @@
+.nav {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 24px;
+}
+
+.left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: #fff;
+  color: var(--plum);
+  cursor: pointer;
+}
+.toggle:hover {
+  background: var(--bg);
+}
+.toggle svg {
+  width: 20px;
+  height: 20px;
+}
+
+.logo {
+  font-weight: 800;
+  font-size: 21px;
+  letter-spacing: -0.5px;
+  color: var(--plum);
+  cursor: pointer;
+}
+.dim {
+  color: #b9a7b0;
+}
+
+.right {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+}
+.link {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text);
+  font-weight: 600;
+  font-size: 15px;
+}
+.link:hover {
+  color: var(--accent);
+}
+.signBtn {
+  background: var(--plum);
+  color: #fff;
+  border: none;
+  border-radius: 999px;
+  padding: 10px 20px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.signBtn:hover {
+  background: var(--plum-700);
+}
+
+@media (max-width: 520px) {
+  .right {
+    gap: 12px;
+  }
+}

@@ -26,11 +26,28 @@ export interface ProposalResult {
   status: string;
   proposal: string;
   responseId: string;
+  reused?: boolean;
+}
+
+export interface ProposalListItem {
+  id: string;
+  status: 'PENDING' | 'PROCESSING' | 'SUCCESS' | 'FAILED';
+  createdAt: string;
+  aiResponse: { id: string; generatedText: string } | null;
+  jobDescription?: { title: string; company: string } | null;
+}
+
+export interface UserProfile {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
 }
 
 export const authApi = {
   register: (name: string, email: string, password: string) =>
     api('/api/auth/register', { method: 'POST', body: { name, email, password }, auth: false }),
+  me: (): Promise<UserProfile> => api('/api/auth/me'),
   // login responds with { tokens: {...} }
   login: (email: string, password: string): Promise<{ tokens: Tokens }> =>
     api('/api/auth/login', { method: 'POST', body: { email, password }, auth: false }),
@@ -45,6 +62,11 @@ export const templatesApi = {
   get: (id: string): Promise<Template> => api(`/api/templates/${id}`),
 };
 
+export const TONES = ['Professional', 'Balanced', 'Friendly'] as const;
+export type Tone = (typeof TONES)[number];
+
+export const LENGTHS = [200, 300, 500] as const;
+
 export interface GenerateAllArgs {
   file?: File | null;
   resumeText?: string;
@@ -53,6 +75,9 @@ export interface GenerateAllArgs {
   jobDescription: string;
   templateId?: string;
   answers?: Record<string, string>;
+  tone?: Tone;
+  length?: number;
+  force?: boolean;
 }
 
 export const proposalsApi = {
@@ -65,8 +90,12 @@ export const proposalsApi = {
     form.append('jobDescription', args.jobDescription);
     if (args.templateId) form.append('templateId', args.templateId);
     if (args.answers) form.append('answers', JSON.stringify(args.answers));
+    if (args.tone) form.append('tone', args.tone);
+    if (args.length) form.append('length', String(args.length));
+    if (args.force) form.append('force', 'true');
     return api('/api/proposals/generate', { method: 'POST', body: form });
   },
-  list: () => api('/api/proposals'),
+  list: (): Promise<ProposalListItem[]> => api('/api/proposals'),
   get: (id: string) => api(`/api/proposals/${id}`),
+  remove: (id: string) => api(`/api/proposals/${id}`, { method: 'DELETE' }),
 };

@@ -1,13 +1,28 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react';
-import { useAuth } from '../auth/AuthContext';
-import { Button, Card, ErrorNote, Field, Input, Textarea } from '../components/ui';
-import { templatesApi, proposalsApi, type Template, type ProposalResult } from '../api/endpoints';
+import { useEffect, useMemo, useState } from 'react';
+import { TopNav } from '../components/TopNav';
+import { HistorySidebar } from '../components/HistorySidebar';
+import { useToast } from '../components/toast';
+import { Button, Input, Textarea } from '../components/ui';
+import {
+  templatesApi,
+  proposalsApi,
+  TONES,
+  LENGTHS,
+  type Template,
+  type Tone,
+  type ProposalListItem,
+} from '../api/endpoints';
 import { ApiError, apiDownload } from '../api/client';
 import { renderMarkdown } from '../lib/markdown';
 import s from './workspace.module.css';
 
+type Step = 1 | 2 | 3;
+const STEP_LABELS = ['Job details', 'Questions', 'Proposal'];
+
 export default function Workspace() {
-  const { logout } = useAuth();
+  const toast = useToast();
+
+  const [step, setStep] = useState<Step>(1);
 
   const [templates, setTemplates] = useState<Template[]>([]);
   const [templateId, setTemplateId] = useState('');
@@ -17,12 +32,17 @@ export default function Workspace() {
   const [jobTitle, setJobTitle] = useState('');
   const [company, setCompany] = useState('');
   const [jobDescription, setJobDescription] = useState('');
+  const [tone, setTone] = useState<Tone>('Professional');
+  const [length, setLength] = useState<number>(300);
   const [answers, setAnswers] = useState<Record<string, string>>({});
 
-  const [result, setResult] = useState<ProposalResult | null>(null);
-  const [error, setError] = useState('');
+  const [proposalText, setProposalText] = useState('');
+  const [proposalId, setProposalId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [copied, setCopied] = useState(false);
+  const [editing, setEditing] = useState(false);
+
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [historyKey, setHistoryKey] = useState(0);
 
   useEffect(() => {
     templatesApi
@@ -31,24 +51,26 @@ export default function Workspace() {
         setTemplates(list);
         if (list[0]) setTemplateId(list[0].id);
       })
-      .catch((err) => setError(err instanceof ApiError ? err.message : 'Failed to load templates'));
-  }, []);
+      .catch((err) => toast.error(err instanceof ApiError ? err.message : 'Failed to load templates'));
+  }, [toast]);
 
   const selectedTemplate = useMemo(
     () => templates.find((t) => t.id === templateId),
     [templates, templateId]
   );
 
-  async function onGenerate(e: FormEvent) {
-    e.preventDefault();
-    setError('');
-    setResult(null);
-    setCopied(false);
+  const hasCv = cvMode === 'upload' ? !!file : resumeText.trim().length >= 30;
+  const step1Valid =
+    jobTitle.trim().length >= 2 && company.trim().length >= 1 && jobDescription.trim().length >= 30 && hasCv;
 
-    if (cvMode === 'upload' && !file) return setError('Please choose a CV file, or switch to "Paste text".');
-    if (cvMode === 'paste' && resumeText.trim().length < 30)
-      return setError('Please paste your CV text (at least 30 characters).');
+  function goToQuestions() {
+    if (!jobTitle.trim() || !company.trim()) return toast.error('Please add the job title and company.');
+    if (jobDescription.trim().length < 30) return toast.error('Job description needs at least 30 characters.');
+    if (!hasCv) return toast.error('Please add your CV — upload a file or paste the text.');
+    setStep(2);
+  }
 
+  async function runGeneration(force = false) {
     setLoading(true);
     try {
       const res = await proposalsApi.generateAll({
@@ -59,173 +81,272 @@ export default function Workspace() {
         jobDescription,
         templateId: templateId || undefined,
         answers,
+        tone,
+        length,
+        force,
       });
-      setResult(res);
+      setProposalText(res.proposal);
+      setProposalId(res.requestId);
+      setEditing(false);
+      setHistoryKey((k) => k + 1);
+      setStep(3);
+      if (res.reused) {
+        toast.info('You already have a proposal for this CV and job — showing it. Use Regenerate for a fresh one.');
+      } else {
+        toast.success(force ? 'Proposal regenerated!' : 'Proposal generated!');
+      }
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Generation failed');
+      toast.error(err instanceof ApiError ? err.message : 'Generation failed');
     } finally {
       setLoading(false);
     }
   }
 
-  async function onCopy() {
-    if (!result) return;
-    await navigator.clipboard.writeText(result.proposal);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+  function onSelectHistory(item: ProposalListItem) {
+    if (!item.aiResponse) return;
+    setProposalText(item.aiResponse.generatedText);
+    setProposalId(item.id);
+    setEditing(false);
+    setStep(3);
   }
 
-  async function onDownloadPdf() {
-    if (!result) return;
-    const blob = await apiDownload(`/api/proposals/${result.requestId}/pdf`);
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `proposal-${result.requestId}.pdf`;
-    a.click();
-    URL.revokeObjectURL(url);
+  async function onCopy() {
+    await navigator.clipboard.writeText(proposalText);
+    toast.success('Copied to clipboard');
   }
+
+  async function onDownload() {
+    if (!proposalId) return;
+    try {
+      const blob = await apiDownload(`/api/proposals/${proposalId}/pdf`);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `proposal-${proposalId}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : 'Download failed');
+    }
+  }
+
+  const wordCount = proposalText.trim() ? proposalText.trim().split(/\s+/).length : 0;
 
   return (
     <div className={s.page}>
-      <div className={s.topbar}>
-        <span className={s.logo}>ProGen</span>
-        <Button variant="secondary" onClick={() => logout()}>
-          Log out
-        </Button>
-      </div>
+      <TopNav onToggleSidebar={() => setSidebarOpen((o) => !o)} />
 
-      <div className={s.container}>
-        {/* Left: the form */}
-        <Card>
-          <h2 className={s.h2}>Generate a proposal</h2>
-          <p className={s.sub}>Add your CV, the job, and a few details — we'll do the rest.</p>
+      <div className={s.body}>
+        {sidebarOpen && (
+          <HistorySidebar
+            key={historyKey}
+            onSelect={onSelectHistory}
+            onDeleted={(id) => {
+              if (proposalId === id) {
+                setProposalText('');
+                setProposalId(null);
+                setStep(1);
+              }
+            }}
+          />
+        )}
 
-          <form onSubmit={onGenerate}>
-            {error && <ErrorNote>{error}</ErrorNote>}
-            <div style={{ height: error ? 14 : 0 }} />
+        <div className={s.main}>
+          {/* progress tabs */}
+          <div className={s.tabs}>
+            {STEP_LABELS.map((label, i) => (
+              <span key={label} className={`${s.tab} ${step === i + 1 ? s.tabActive : ''}`}>
+                {label}
+              </span>
+            ))}
+          </div>
+          <div className={s.progressTrack}>
+            <div className={s.progressFill} style={{ width: `${(step / 3) * 100}%` }} />
+          </div>
 
-            <Field label="Template">
-              <select
-                className={s.select}
-                value={templateId}
-                onChange={(e) => setTemplateId(e.target.value)}
-              >
-                {templates.map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {t.name}
-                  </option>
-                ))}
-              </select>
-            </Field>
+          {/* ---------- Step 1: Job details ---------- */}
+          {step === 1 && (
+            <>
+              <h1 className={s.heading}>
+                Generate <em>proposal</em>
+              </h1>
 
-            <div className={s.row}>
-              <Field label="Job title">
-                <Input value={jobTitle} onChange={(e) => setJobTitle(e.target.value)} placeholder="Backend Engineer" required />
-              </Field>
-              <Field label="Company">
-                <Input value={company} onChange={(e) => setCompany(e.target.value)} placeholder="Acme Inc." required />
-              </Field>
-            </div>
-
-            <Field label="Job description" hint="Paste the full job posting.">
-              <Textarea
-                value={jobDescription}
-                onChange={(e) => setJobDescription(e.target.value)}
-                placeholder="We're looking for..."
-                required
-                minLength={30}
-                rows={5}
-              />
-            </Field>
-
-            <div className={s.sectionTitle}>Your CV</div>
-            <div className={s.toggle}>
-              <button type="button" className={cvMode === 'upload' ? s.active : ''} onClick={() => setCvMode('upload')}>
-                Upload file
-              </button>
-              <button type="button" className={cvMode === 'paste' ? s.active : ''} onClick={() => setCvMode('paste')}>
-                Paste text
-              </button>
-            </div>
-
-            {cvMode === 'upload' ? (
-              <Field label="CV file (PDF or DOCX)">
-                <input
-                  type="file"
-                  accept=".pdf,.docx"
-                  onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+              <div className={s.jobCard}>
+                <div className={s.row}>
+                  <Input value={jobTitle} onChange={(e) => setJobTitle(e.target.value)} placeholder="Job title" />
+                  <Input value={company} onChange={(e) => setCompany(e.target.value)} placeholder="Company" />
+                </div>
+                <textarea
+                  className={s.jobTextarea}
+                  value={jobDescription}
+                  onChange={(e) => setJobDescription(e.target.value)}
+                  placeholder="Paste the job description here..."
+                  maxLength={5000}
                 />
-              </Field>
-            ) : (
-              <Field label="CV text">
-                <Textarea
-                  value={resumeText}
-                  onChange={(e) => setResumeText(e.target.value)}
-                  placeholder="Paste your CV / résumé here..."
-                  rows={6}
-                />
-              </Field>
-            )}
+                <div className={s.jobFoot}>
+                  <span className={s.charCount}>{jobDescription.length} characters</span>
+                </div>
+              </div>
 
-            {selectedTemplate && selectedTemplate.fields.length > 0 && (
-              <>
-                <div className={s.sectionTitle}>A few smart questions (optional)</div>
-                {selectedTemplate.fields.map((f) => (
-                  <Field key={f.key} label={f.label} hint={f.required ? 'Required' : undefined}>
+              <div className={s.label}>Your CV</div>
+              <div className={s.cvToggle}>
+                <button type="button" className={cvMode === 'upload' ? s.active : ''} onClick={() => setCvMode('upload')}>
+                  Upload file
+                </button>
+                <button type="button" className={cvMode === 'paste' ? s.active : ''} onClick={() => setCvMode('paste')}>
+                  Paste text
+                </button>
+              </div>
+              <div className={s.cvBox}>
+                {cvMode === 'upload' ? (
+                  <div>
+                    <label className={s.fileBtn}>
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.7} stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5" />
+                      </svg>
+                      {file ? 'Change file' : 'Upload PDF or DOCX'}
+                      <input type="file" accept=".pdf,.docx" hidden onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
+                    </label>
+                    {file && (
+                      <span className={s.fileName}>
+                        {file.name}
+                        <button type="button" className={s.fileClear} onClick={() => setFile(null)} aria-label="Remove file">
+                          ×
+                        </button>
+                      </span>
+                    )}
+                  </div>
+                ) : (
+                  <Textarea
+                    value={resumeText}
+                    onChange={(e) => setResumeText(e.target.value)}
+                    placeholder="Paste your CV / résumé here..."
+                    rows={5}
+                  />
+                )}
+              </div>
+
+              <div className={s.prefLabel}>Preference</div>
+              <div className={s.prefs}>
+                <select className={s.pill} value={tone} onChange={(e) => setTone(e.target.value as Tone)}>
+                  {TONES.map((t) => (
+                    <option key={t} value={t}>
+                      Tone: {t}
+                    </option>
+                  ))}
+                </select>
+                <select className={s.pill} value={templateId} onChange={(e) => setTemplateId(e.target.value)}>
+                  {templates.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      Type: {t.name}
+                    </option>
+                  ))}
+                </select>
+                <select className={s.pill} value={length} onChange={(e) => setLength(Number(e.target.value))}>
+                  {LENGTHS.map((n) => (
+                    <option key={n} value={n}>
+                      Length: {n} words
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 22 }}>
+                <button className={s.nextBtn} onClick={goToQuestions} disabled={!step1Valid} aria-label="Next">
+                  →
+                </button>
+              </div>
+            </>
+          )}
+
+          {/* ---------- Step 2: Questions ---------- */}
+          {step === 2 && (
+            <>
+              <button className={s.back} onClick={() => setStep(1)}>
+                ← Back
+              </button>
+              <h2 className={s.stepHeading}>A few smart questions</h2>
+              <p className={s.stepSub}>All optional — better answers make a sharper proposal.</p>
+
+              <div className={s.questions}>
+                {(selectedTemplate?.fields ?? []).map((f) => (
+                  <div className={s.qCard} key={f.key}>
+                    <div className={s.qLabel}>{f.label}</div>
+                    {f.placeholder && <div className={s.qHint}>{f.placeholder}</div>}
                     {f.type === 'textarea' ? (
                       <Textarea
                         value={answers[f.key] ?? ''}
-                        placeholder={f.placeholder}
                         onChange={(e) => setAnswers((a) => ({ ...a, [f.key]: e.target.value }))}
                       />
                     ) : (
                       <Input
                         value={answers[f.key] ?? ''}
-                        placeholder={f.placeholder}
                         onChange={(e) => setAnswers((a) => ({ ...a, [f.key]: e.target.value }))}
                       />
                     )}
-                  </Field>
+                  </div>
                 ))}
-              </>
-            )}
-
-            <div style={{ height: 6 }} />
-            <Button type="submit" variant="accent" block loading={loading}>
-              {loading ? 'Generating…' : 'Generate proposal'}
-            </Button>
-          </form>
-        </Card>
-
-        {/* Right: the result */}
-        <Card>
-          <h2 className={s.h2}>Your proposal</h2>
-          <p className={s.sub}>Copy it into your application, or download a polished PDF.</p>
-
-          {result ? (
-            <>
-              <div className={s.actions}>
-                <Button variant="secondary" onClick={onCopy}>
-                  {copied ? 'Copied ✓' : 'Copy'}
-                </Button>
-                <Button variant="secondary" onClick={onDownloadPdf}>
-                  Download PDF
-                </Button>
+                {(selectedTemplate?.fields ?? []).length === 0 && (
+                  <p className={s.stepSub}>No questions for this template — just generate.</p>
+                )}
               </div>
-              <div
-                className={s.result}
-                dangerouslySetInnerHTML={{ __html: renderMarkdown(result.proposal) }}
-              />
+
+              <Button variant="accent" block loading={loading} onClick={() => runGeneration(false)}>
+                {loading ? 'Generating…' : 'Generate proposal'}
+              </Button>
             </>
-          ) : (
-            <div className={s.empty}>
-              {loading
-                ? 'Talking to the AI… this takes a few seconds.'
-                : 'Your generated proposal will appear here.'}
-            </div>
           )}
-        </Card>
+
+          {/* ---------- Step 3: Proposal ---------- */}
+          {step === 3 && (
+            <>
+              <button className={s.back} onClick={() => setStep(2)}>
+                ← Back
+              </button>
+
+              <div className={s.summary}>
+                <div className={s.summaryTitle}>Job description</div>
+                <div className={s.summaryText}>{jobDescription || '—'}</div>
+              </div>
+              <div className={s.chips}>
+                <span className={s.chip}>Type: {selectedTemplate?.name ?? 'Proposal'}</span>
+                <span className={s.chip}>Target: {length} words</span>
+                <span className={s.chip}>Tone: {tone}</span>
+              </div>
+
+              <div className={s.proposalCard}>
+                <div className={s.toolbar}>
+                  <span className={s.wordCount}>{wordCount} words</span>
+                  <button className={s.toolBtn} onClick={() => setEditing((e) => !e)}>
+                    {editing ? 'Done' : 'Edit'}
+                  </button>
+                  <button className={s.toolBtn} onClick={onCopy}>
+                    Copy
+                  </button>
+                  <button className={s.toolBtn} onClick={() => runGeneration(true)} disabled={loading}>
+                    {loading ? 'Regenerating…' : 'Regenerate'}
+                  </button>
+                  <button className={s.toolBtn} onClick={onDownload}>
+                    Download
+                  </button>
+                  <button className={`${s.toolBtn} ${s.toolBtnPrimary}`} onClick={() => toast.success('Saved to history')}>
+                    Save
+                  </button>
+                </div>
+
+                {editing ? (
+                  <textarea
+                    className={s.editArea}
+                    value={proposalText}
+                    onChange={(e) => setProposalText(e.target.value)}
+                  />
+                ) : (
+                  <div className={s.proposalBody} dangerouslySetInnerHTML={{ __html: renderMarkdown(proposalText) }} />
+                )}
+              </div>
+            </>
+          )}
+        </div>
       </div>
     </div>
   );

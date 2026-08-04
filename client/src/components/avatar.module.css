@@ -1,0 +1,63 @@
+.wrap {
+  position: relative;
+}
+
+.avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--plum);
+  color: #fff;
+  font-weight: 700;
+  font-size: 15px;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.avatar:hover {
+  background: var(--plum-700);
+}
+
+.menu {
+  position: absolute;
+  right: 0;
+  top: 50px;
+  min-width: 230px;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+  overflow: hidden;
+  z-index: 40;
+}
+
+.info {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+}
+.name {
+  font-weight: 700;
+  font-size: 14px;
+}
+.email {
+  color: var(--muted);
+  font-size: 13px;
+  margin-top: 2px;
+  word-break: break-all;
+}
+
+.logout {
+  width: 100%;
+  text-align: left;
+  padding: 12px 16px;
+  background: #fff;
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--danger);
+}
+.logout:hover {
+  background: var(--bg);
+}

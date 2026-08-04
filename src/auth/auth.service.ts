@@ -11,9 +11,16 @@ const googleClient = new OAuth2Client(env.GOOGLE_CLIENT_ID);
 const REFRESH_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
 export class AuthService{
-   
+
     constructor(private userRepo: UserRepo){}
-    
+
+    // Returns the signed-in user's public profile (for the frontend avatar/menu).
+    async getProfile(userId: string){
+        const user = await this.userRepo.findById(userId);
+        if(!user) throw new NotFoundError('User not found');
+        return {id: user.id, name: user.name, email: user.email, role: user.role};
+    }
+
     async register(name:string, email:string, password:string){
         const existingUser = await this.userRepo.findByEmail(email);
         if(existingUser){
@@ -66,8 +73,6 @@ export class AuthService{
 
     private async issueTokens(userId: string, role: Role){
         const accessToken = jwt.sign({userId, role}, env.JWT_ACCESS_TOKEN, {expiresIn: '1h'});
-        // jti (a random id) makes every refresh token string unique, so two tokens
-        // issued in the same second can never collide on the unique `token` column.
         const refreshToken = jwt.sign({userId, role, jti: randomUUID()}, env.JWT_REFRESH_TOKEN, {expiresIn:'7d'});
         await this.userRepo.storeRefreshToken(refreshToken, userId,  new Date(Date.now() + REFRESH_TTL_MS));
         return {accessToken, refreshToken};

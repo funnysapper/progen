@@ -43,6 +43,11 @@ export class AuthController{
           return res.status(200).json(logout);
       }
 
+      me = async (req:Request, res:Response) => {
+        const profile = await this.authService.getProfile(req.user!.userId);
+        return res.status(200).json(profile);
+      }
+
       refresh = async(req:Request,res:Response)=>{
         const parsed = refreshTokenSchema.safeParse(req.body);
         if(!parsed.success){

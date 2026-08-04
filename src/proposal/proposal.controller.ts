@@ -22,7 +22,13 @@ export class ProposalController {
       req.user!.userId,
       parsed.data.resumeId,
       parsed.data.jobDescriptionId,
-      { templateId: parsed.data.templateId, answers: parsed.data.answers }
+      {
+        templateId: parsed.data.templateId,
+        answers: parsed.data.answers,
+        tone: parsed.data.tone,
+        length: parsed.data.length,
+        force: parsed.data.force,
+      }
     );
     return res.status(201).json(result);
   };
@@ -57,6 +63,9 @@ export class ProposalController {
     const result = await this.service.generate(userId, resumeId, job.id, {
       templateId: parsed.data.templateId,
       answers,
+      tone: parsed.data.tone,
+      length: parsed.data.length,
+      force: parsed.data.force,
     });
     return res.status(201).json(result);
   };
@@ -70,6 +79,11 @@ export class ProposalController {
     const id = String(req.params.id);
     const request = await this.service.getForUser(id, req.user!.userId);
     return res.json(request);
+  };
+
+  remove = async (req: Request, res: Response) => {
+    await this.service.deleteForUser(String(req.params.id), req.user!.userId);
+    return res.status(204).send();
   };
 
   downloadPdf = async (req: Request, res: Response) => {
