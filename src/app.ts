@@ -10,7 +10,7 @@ import morgan from "morgan";
 const app = express();
 // Allow the React dev frontend (Vite) to call the API from the browser.
 app.use(cors({
-  origin: (process.env.CORS_ORIGIN ?? 'http://localhost:5173').split(','),
+  origin: ("progen-one.vercel.app"),
   credentials: true,
 }));
 app.use(express.json());
