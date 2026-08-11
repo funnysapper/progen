@@ -393,3 +393,38 @@
     grid-template-columns: 1fr;
   }
 }
+
+@media (max-width: 780px) {
+  .main {
+    padding: 16px 16px 48px;
+  }
+}
+
+@media (max-width: 480px) {
+  .heading {
+    font-size: 26px;
+  }
+  .stepHeading {
+    font-size: 22px;
+  }
+  .jobCard {
+    padding: 14px;
+  }
+  .tab {
+    font-size: 12px;
+  }
+  .qCard {
+    padding: 14px;
+  }
+  .toolbar {
+    gap: 6px;
+  }
+  .toolBtn {
+    padding: 6px 9px;
+    font-size: 12px;
+  }
+  .proposalBody,
+  .editArea {
+    padding: 16px;
+  }
+}

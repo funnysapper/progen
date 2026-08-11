@@ -25,6 +25,7 @@
   right: 0;
   top: 50px;
   min-width: 230px;
+  max-width: calc(100vw - 32px);
   background: #fff;
   border: 1px solid var(--border);
   border-radius: 12px;

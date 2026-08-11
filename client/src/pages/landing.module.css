@@ -295,3 +295,29 @@
     gap: 12px;
   }
 }
+
+@media (max-width: 480px) {
+  .hero {
+    padding: 40px 16px 24px;
+  }
+  .heroLeft h1 {
+    font-size: 30px;
+    letter-spacing: -1px;
+    margin-bottom: 20px;
+  }
+  .block {
+    padding: 40px 16px;
+  }
+  .h2 {
+    font-size: 22px;
+  }
+  .preview {
+    padding: 16px;
+  }
+  .feature {
+    padding: 16px;
+  }
+  .tCard {
+    padding: 16px;
+  }
+}

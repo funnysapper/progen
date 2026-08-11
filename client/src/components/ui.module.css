@@ -121,3 +121,9 @@
   border-radius: 10px;
   font-size: 13px;
 }
+
+@media (max-width: 480px) {
+  .card {
+    padding: 16px;
+  }
+}

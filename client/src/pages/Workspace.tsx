@@ -41,7 +41,9 @@ export default function Workspace() {
   const [loading, setLoading] = useState(false);
   const [editing, setEditing] = useState(false);
 
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(() =>
+    typeof window !== 'undefined' ? window.innerWidth > 860 : true
+  );
   const [historyKey, setHistoryKey] = useState(0);
 
   useEffect(() => {

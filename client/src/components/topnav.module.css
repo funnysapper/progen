@@ -81,3 +81,22 @@
     gap: 12px;
   }
 }
+
+@media (max-width: 420px) {
+  .nav {
+    padding: 12px 14px;
+  }
+  .logo {
+    font-size: 18px;
+  }
+  .right {
+    gap: 8px;
+  }
+  .link {
+    font-size: 13px;
+  }
+  .signBtn {
+    padding: 8px 14px;
+    font-size: 13px;
+  }
+}
