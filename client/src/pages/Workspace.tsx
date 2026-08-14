@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { TopNav } from '../components/TopNav';
 import { HistorySidebar } from '../components/HistorySidebar';
+import { AuthGateModal } from '../components/AuthGateModal';
+import { useAuth } from '../auth/AuthContext';
 import { useToast } from '../components/toast';
 import { Button, Input, Textarea } from '../components/ui';
 import {
@@ -21,8 +23,10 @@ const STEP_LABELS = ['Job details', 'Questions', 'Proposal'];
 
 export default function Workspace() {
   const toast = useToast();
+  const { isAuthenticated } = useAuth();
 
   const [step, setStep] = useState<Step>(1);
+  const [gate, setGate] = useState<null | 'download' | 'save'>(null);
 
   const [templates, setTemplates] = useState<Template[]>([]);
   const [templateId, setTemplateId] = useState('');
@@ -72,31 +76,43 @@ export default function Workspace() {
     setStep(2);
   }
 
+  // The current form inputs, shared by preview / generate / persist.
+  function currentArgs() {
+    return {
+      file: cvMode === 'upload' ? file : null,
+      resumeText: cvMode === 'paste' ? resumeText : undefined,
+      jobTitle,
+      company,
+      jobDescription,
+      templateId: templateId || undefined,
+      answers,
+      tone,
+      length,
+    };
+  }
+
   async function runGeneration(force = false) {
     setLoading(true);
     try {
-      const res = await proposalsApi.generateAll({
-        file: cvMode === 'upload' ? file : null,
-        resumeText: cvMode === 'paste' ? resumeText : undefined,
-        jobTitle,
-        company,
-        jobDescription,
-        templateId: templateId || undefined,
-        answers,
-        tone,
-        length,
-        force,
-      });
-      setProposalText(res.proposal);
-      setProposalId(res.requestId);
-      setEditing(false);
-      setHistoryKey((k) => k + 1);
-      setStep(3);
-      if (res.reused) {
-        toast.info('You already have a proposal for this CV and job — showing it. Use Regenerate for a fresh one.');
+      if (isAuthenticated) {
+        const res = await proposalsApi.generateAll({ ...currentArgs(), force });
+        setProposalText(res.proposal);
+        setProposalId(res.requestId);
+        setHistoryKey((k) => k + 1);
+        if (res.reused) {
+          toast.info('You already have a proposal for this CV and job — showing it. Use Regenerate for a fresh one.');
+        } else {
+          toast.success(force ? 'Proposal regenerated!' : 'Proposal generated!');
+        }
       } else {
+        // Guest: generate a one-time proposal, nothing stored.
+        const res = await proposalsApi.preview(currentArgs());
+        setProposalText(res.proposal);
+        setProposalId(null);
         toast.success(force ? 'Proposal regenerated!' : 'Proposal generated!');
       }
+      setEditing(false);
+      setStep(3);
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : 'Generation failed');
     } finally {
@@ -117,14 +133,13 @@ export default function Workspace() {
     toast.success('Copied to clipboard');
   }
 
-  async function onDownload() {
-    if (!proposalId) return;
+  async function downloadPdf(id: string) {
     try {
-      const blob = await apiDownload(`/api/proposals/${proposalId}/pdf`);
+      const blob = await apiDownload(`/api/proposals/${id}/pdf`);
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `proposal-${proposalId}.pdf`;
+      a.download = `proposal-${id}.pdf`;
       a.click();
       URL.revokeObjectURL(url);
     } catch (err) {
@@ -132,14 +147,41 @@ export default function Workspace() {
     }
   }
 
+  // Download/Save need an account. Guests are prompted to sign up first.
+  function onDownloadClick() {
+    if (isAuthenticated && proposalId) downloadPdf(proposalId);
+    else setGate('download');
+  }
+
+  function onSaveClick() {
+    if (isAuthenticated && proposalId) toast.success('Saved to your history');
+    else setGate('save');
+  }
+
+  // After a guest signs up in the modal, save the exact proposal they were
+  // shown (no re-generation), then perform whichever action they clicked.
+  async function handleGateSuccess() {
+    const action = gate;
+    setGate(null);
+    try {
+      const res = await proposalsApi.persist({ ...currentArgs(), proposal: proposalText });
+      setProposalId(res.requestId);
+      setHistoryKey((k) => k + 1);
+      if (action === 'download') await downloadPdf(res.requestId);
+      else toast.success('Saved to your history');
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : 'Could not save your proposal');
+    }
+  }
+
   const wordCount = proposalText.trim() ? proposalText.trim().split(/\s+/).length : 0;
 
   return (
     <div className={s.page}>
-      <TopNav onToggleSidebar={() => setSidebarOpen((o) => !o)} />
+      <TopNav onToggleSidebar={isAuthenticated ? () => setSidebarOpen((o) => !o) : undefined} />
 
       <div className={s.body}>
-        {sidebarOpen && (
+        {isAuthenticated && sidebarOpen && (
           <HistorySidebar
             key={historyKey}
             onSelect={onSelectHistory}
@@ -328,10 +370,10 @@ export default function Workspace() {
                   <button className={s.toolBtn} onClick={() => runGeneration(true)} disabled={loading}>
                     {loading ? 'Regenerating…' : 'Regenerate'}
                   </button>
-                  <button className={s.toolBtn} onClick={onDownload}>
+                  <button className={s.toolBtn} onClick={onDownloadClick}>
                     Download
                   </button>
-                  <button className={`${s.toolBtn} ${s.toolBtnPrimary}`} onClick={() => toast.success('Saved to history')}>
+                  <button className={`${s.toolBtn} ${s.toolBtnPrimary}`} onClick={onSaveClick}>
                     Save
                   </button>
                 </div>
@@ -350,6 +392,15 @@ export default function Workspace() {
           )}
         </div>
       </div>
+
+      {gate && (
+        <AuthGateModal
+          title={gate === 'download' ? 'Sign up to download' : 'Sign up to save'}
+          subtitle="Create a free account to download your proposal as a PDF and keep it in your history. Your proposal is safe — it'll be here when you're done."
+          onSuccess={handleGateSuccess}
+          onClose={() => setGate(null)}
+        />
+      )}
     </div>
   );
 }

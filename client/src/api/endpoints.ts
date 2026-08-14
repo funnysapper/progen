@@ -80,20 +80,33 @@ export interface GenerateAllArgs {
   force?: boolean;
 }
 
+function buildProposalForm(args: GenerateAllArgs): FormData {
+  const form = new FormData();
+  if (args.file) form.append('file', args.file);
+  if (args.resumeText) form.append('resumeText', args.resumeText);
+  form.append('jobTitle', args.jobTitle);
+  form.append('company', args.company);
+  form.append('jobDescription', args.jobDescription);
+  if (args.templateId) form.append('templateId', args.templateId);
+  if (args.answers) form.append('answers', JSON.stringify(args.answers));
+  if (args.tone) form.append('tone', args.tone);
+  if (args.length) form.append('length', String(args.length));
+  if (args.force) form.append('force', 'true');
+  return form;
+}
+
 export const proposalsApi = {
-  generateAll: (args: GenerateAllArgs): Promise<ProposalResult> => {
-    const form = new FormData();
-    if (args.file) form.append('file', args.file);
-    if (args.resumeText) form.append('resumeText', args.resumeText);
-    form.append('jobTitle', args.jobTitle);
-    form.append('company', args.company);
-    form.append('jobDescription', args.jobDescription);
-    if (args.templateId) form.append('templateId', args.templateId);
-    if (args.answers) form.append('answers', JSON.stringify(args.answers));
-    if (args.tone) form.append('tone', args.tone);
-    if (args.length) form.append('length', String(args.length));
-    if (args.force) form.append('force', 'true');
-    return api('/api/proposals/generate', { method: 'POST', body: form });
+  // Authed: generate + persist.
+  generateAll: (args: GenerateAllArgs): Promise<ProposalResult> =>
+    api('/api/proposals/generate', { method: 'POST', body: buildProposalForm(args) }),
+  // Public: generate for a guest, nothing stored.
+  preview: (args: GenerateAllArgs): Promise<{ proposal: string }> =>
+    api('/api/proposals/preview', { method: 'POST', body: buildProposalForm(args), auth: false }),
+  // Authed: save an already-generated proposal verbatim.
+  persist: (args: GenerateAllArgs & { proposal: string }): Promise<ProposalResult> => {
+    const form = buildProposalForm(args);
+    form.append('proposal', args.proposal);
+    return api('/api/proposals/persist', { method: 'POST', body: form });
   },
   list: (): Promise<ProposalListItem[]> => api('/api/proposals'),
   get: (id: string) => api(`/api/proposals/${id}`),

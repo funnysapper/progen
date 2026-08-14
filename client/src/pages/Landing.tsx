@@ -1,5 +1,4 @@
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../auth/AuthContext';
 import { Button } from '../components/ui';
 import { TopNav } from '../components/TopNav';
 import { ICON_JOB, ICON_QUESTIONS, ICON_TONE, ICON_SEND } from '../components/featureIcons';
@@ -30,10 +29,10 @@ const SOON_TEMPLATES = [
 ];
 
 export default function Landing() {
-  const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
 
-  const startPrimary = () => navigate(isAuthenticated ? '/app' : '/register');
+  // Anyone can try the generator; sign-up is only needed to download or save.
+  const startPrimary = () => navigate('/app');
   const scrollToTemplates = () =>
     document.getElementById('templates')?.scrollIntoView({ behavior: 'smooth' });
 

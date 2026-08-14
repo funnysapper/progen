@@ -132,6 +132,86 @@ export class ProposalService {
     }
   }
 
+  // Guest (public) generation — builds the prompt and calls the AI, but stores
+  // NOTHING. Returns just the proposal text for one-time use.
+  async previewGenerate(input: {
+    candidateName?: string;
+    resumeText: string;
+    jobTitle: string;
+    company: string;
+    jobDescription: string;
+    templateId?: string;
+    answers?: Record<string, string>;
+    tone?: string;
+    length?: number;
+  }) {
+    const template = input.templateId
+      ? await this.promptTemplateRepo.findActiveById(input.templateId)
+      : await this.promptTemplateRepo.findActiveByType('JOB_PROPOSAL');
+    if (!template) throw new AppError(500, 'No active prompt template configured. Run the seed script.');
+
+    const fields = (template.fields as unknown as TemplateField[]) ?? [];
+    const answers = input.answers ?? {};
+    const missing = fields.filter((f) => f.required && !answers[f.key]?.trim()).map((f) => f.label);
+    if (missing.length) {
+      throw new BadRequestError(`Please answer the required questions: ${missing.join(', ')}`);
+    }
+
+    const prompt = this.buildPrompt(template.templateText, {
+      candidateName: input.candidateName ?? 'The candidate',
+      resumeText: input.resumeText,
+      jobTitle: input.jobTitle,
+      companyName: input.company,
+      jobDescription: input.jobDescription,
+      additionalInfo: this.formatAnswers(fields, answers),
+      tone: input.tone ?? 'Professional',
+      length: String(input.length ?? 300),
+    });
+
+    const completion = await ai.chat.completions.create({
+      model: env.AI_MODEL,
+      temperature: 0.7,
+      messages: [{ role: 'user', content: prompt }],
+    });
+    const proposal = completion.choices[0]?.message?.content?.trim();
+    if (!proposal) throw new AppError(502, 'Proposal generation failed: the AI returned an empty response.');
+    return { proposal };
+  }
+
+  // Persists an ALREADY-generated proposal verbatim (no new AI call). Used when a
+  // guest signs up to save/download the exact proposal they were shown.
+  async persistProvided(
+    userId: string,
+    resumeId: string,
+    jobDescriptionId: string,
+    options: { templateId?: string; answers?: Record<string, string>; proposal: string }
+  ) {
+    const template = options.templateId
+      ? await this.promptTemplateRepo.findActiveById(options.templateId)
+      : await this.promptTemplateRepo.findActiveByType('JOB_PROPOSAL');
+    if (!template) throw new AppError(500, 'No active prompt template configured.');
+
+    const existing = await this.aiRequestRepo.findByCombo(userId, resumeId, jobDescriptionId);
+    const request =
+      existing ??
+      (await this.aiRequestRepo.create({
+        userId,
+        resumeId,
+        jobDescriptionId,
+        templateId: template.id,
+        inputs: options.answers ?? {},
+      }));
+    const response = await this.aiRequestRepo.upsertResponse(request.id, options.proposal);
+    await this.aiRequestRepo.updateStatus(request.id, 'SUCCESS');
+    return {
+      requestId: request.id,
+      status: 'SUCCESS' as const,
+      proposal: options.proposal,
+      responseId: response.id,
+      reused: false,
+    };
+  }
+
   listForUser(userId: string) {
     return this.aiRequestRepo.listForUser(userId);
   }

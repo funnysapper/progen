@@ -57,6 +57,18 @@ export class ResumeService {
     });
   }
 
+  // Extracts CV text from an uploaded file WITHOUT storing anything.
+  // Used by the public (guest) preview flow.
+  async extractPlainText(file: Express.Multer.File): Promise<string> {
+    const text = (await this.extractText(file)).trim();
+    if (text.length < MIN_TEXT_LENGTH) {
+      throw new BadRequestError(
+        "We couldn't read any text from this file. If it's a scanned document or an image saved as a PDF, it has no selectable text to extract. Please upload a text-based PDF or DOCX."
+      );
+    }
+    return text;
+  }
+
   listForUser(userId: string) {
     return this.resumeRepo.findByUser(userId);
   }

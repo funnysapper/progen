@@ -25,9 +25,14 @@ const controller = new ProposalController(
 );
 const proposalRouter = Router();
 
+// Public — guests can generate a one-time proposal without an account.
+proposalRouter.post('/preview', upload.single('file'), controller.preview);
+
+// Everything below requires a signed-in user.
 proposalRouter.use(authenticate);
 
 proposalRouter.post('/generate', upload.single('file'), controller.generateAll);
+proposalRouter.post('/persist', upload.single('file'), controller.persist);
 proposalRouter.post('/', controller.create);
 proposalRouter.get('/', controller.list);
 proposalRouter.get('/:id/pdf', controller.downloadPdf);

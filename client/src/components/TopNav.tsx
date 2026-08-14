@@ -9,8 +9,8 @@ export function TopNav({ onToggleSidebar }: { onToggleSidebar?: () => void }) {
   const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
 
-  const goApp = () => navigate(isAuthenticated ? '/app' : '/login');
-  const goTemplates = () => navigate(isAuthenticated ? '/templates' : '/login');
+  const goApp = () => navigate('/app');
+  const goTemplates = () => navigate('/templates');
 
   return (
     <nav className={s.nav}>

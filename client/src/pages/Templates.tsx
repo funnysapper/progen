@@ -69,7 +69,10 @@ export default function Templates() {
         <div className={s.grid}>
           {CARDS.map((c) => (
             <div className={s.card} key={c.key}>
-              <div className={s.thumb} style={{ background: c.gradient }} />
+              <div
+                className={s.thumb}
+                style={{ background: `url('/templates/${c.key}.jpg') center / cover no-repeat, ${c.gradient}` }}
+              />
               <div className={s.body}>
                 <div className={s.head}>
                   <h3>{c.title}</h3>
