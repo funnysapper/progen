@@ -1,0 +1,89 @@
+.wrap {
+  position: relative;
+  display: inline-block;
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 9px 14px;
+  background: #fff;
+  color: var(--text);
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.pill:hover {
+  border-color: var(--accent);
+}
+.caret {
+  font-size: 10px;
+  color: var(--muted);
+}
+
+.menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  min-width: 100%;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+  padding: 6px;
+  z-index: 50;
+  max-height: 260px;
+  overflow: auto;
+}
+
+.option {
+  display: block;
+  width: 100%;
+  text-align: left;
+  border: none;
+  background: none;
+  padding: 9px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+}
+.option:hover {
+  background: var(--bg);
+}
+.optionActive,
+.optionActive:hover {
+  color: #fff;
+  background: var(--plum);
+}
+
+/* ---- length slider popover ---- */
+.sliderMenu {
+  padding: 16px;
+  min-width: 230px;
+}
+.sliderMarks {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--muted);
+  margin-bottom: 4px;
+}
+.slider {
+  width: 100%;
+  accent-color: var(--plum);
+  cursor: pointer;
+}
+.sliderValue {
+  text-align: center;
+  margin-top: 8px;
+  font-weight: 700;
+  color: var(--accent);
+  font-size: 13px;
+}

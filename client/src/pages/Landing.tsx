@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../components/ui';
 import { TopNav } from '../components/TopNav';
+import { TemplateCards } from '../components/TemplateCards';
 import { ICON_JOB, ICON_QUESTIONS, ICON_TONE, ICON_SEND } from '../components/featureIcons';
 import s from './landing.module.css';
 
@@ -17,16 +18,6 @@ const FEATURES = [
   { icon: ICON_SEND, title: 'Copy & send', text: 'Copy the text or download a polished PDF.' },
 ];
 
-// One real template + honest "Coming soon" cards to fill the section.
-const REAL_TEMPLATE = {
-  tag: 'Proposal',
-  title: 'Job Proposal',
-  text: 'A tailored, 5-section proposal built from your CV and the job.',
-};
-const SOON_TEMPLATES = [
-  { tag: 'Cover letter', title: 'Cover letter', text: 'A classic application letter aligned to the role.' },
-  { tag: 'Freelance bid', title: 'Freelance bid', text: 'A persuasive pitch for gigs and contracts.' },
-];
 
 export default function Landing() {
   const navigate = useNavigate();
@@ -106,26 +97,7 @@ export default function Landing() {
         <div className={s.section}>
           <h2 className={s.h2}>Start from a template</h2>
           <p className={s.lead}>Pick a starting point and generate right away.</p>
-          <div className={s.templates}>
-            <div className={s.tCard}>
-              <span className={s.tTag}>{REAL_TEMPLATE.tag}</span>
-              <h3>{REAL_TEMPLATE.title}</h3>
-              <p>{REAL_TEMPLATE.text}</p>
-              <Button variant="primary" onClick={startPrimary}>
-                Use this template
-              </Button>
-            </div>
-            {SOON_TEMPLATES.map((t) => (
-              <div className={`${s.tCard} ${s.tCardSoon}`} key={t.title}>
-                <span className={`${s.tTag} ${s.soonTag}`}>Coming soon</span>
-                <h3>{t.title}</h3>
-                <p>{t.text}</p>
-                <Button variant="secondary" disabled>
-                  Coming soon
-                </Button>
-              </div>
-            ))}
-          </div>
+          <TemplateCards />
         </div>
       </section>
 

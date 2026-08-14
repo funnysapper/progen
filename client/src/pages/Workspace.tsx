@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { TopNav } from '../components/TopNav';
 import { HistorySidebar } from '../components/HistorySidebar';
 import { AuthGateModal } from '../components/AuthGateModal';
+import { PillSelect } from '../components/PillSelect';
+import { LengthSlider } from '../components/LengthSlider';
 import { useAuth } from '../auth/AuthContext';
 import { useToast } from '../components/toast';
 import { Button, Input, Textarea } from '../components/ui';
@@ -9,7 +11,6 @@ import {
   templatesApi,
   proposalsApi,
   TONES,
-  LENGTHS,
   type Template,
   type Tone,
   type ProposalListItem,
@@ -272,27 +273,19 @@ export default function Workspace() {
 
               <div className={s.prefLabel}>Preference</div>
               <div className={s.prefs}>
-                <select className={s.pill} value={tone} onChange={(e) => setTone(e.target.value as Tone)}>
-                  {TONES.map((t) => (
-                    <option key={t} value={t}>
-                      Tone: {t}
-                    </option>
-                  ))}
-                </select>
-                <select className={s.pill} value={templateId} onChange={(e) => setTemplateId(e.target.value)}>
-                  {templates.map((t) => (
-                    <option key={t.id} value={t.id}>
-                      Type: {t.name}
-                    </option>
-                  ))}
-                </select>
-                <select className={s.pill} value={length} onChange={(e) => setLength(Number(e.target.value))}>
-                  {LENGTHS.map((n) => (
-                    <option key={n} value={n}>
-                      Length: {n} words
-                    </option>
-                  ))}
-                </select>
+                <PillSelect
+                  prefix="Tone"
+                  value={tone}
+                  onChange={(v) => setTone(v as Tone)}
+                  options={TONES.map((t) => ({ value: t, label: t }))}
+                />
+                <PillSelect
+                  prefix="Type"
+                  value={templateId}
+                  onChange={setTemplateId}
+                  options={templates.map((t) => ({ value: t.id, label: t.name }))}
+                />
+                <LengthSlider value={length} onChange={setLength} />
               </div>
 
               <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 22 }}>

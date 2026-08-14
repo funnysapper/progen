@@ -8,9 +8,22 @@ import proposalRouter from './proposal/proposal.route';
 import templateRouter from './template/template.route';
 import morgan from "morgan";
 const app = express();
-// Allow the React dev frontend (Vite) to call the API from the browser.
+
+// Origins allowed to call the API from a browser. Defaults to the deployed
+// frontend; override/extend with a comma-separated CORS_ORIGIN env var. Any
+// localhost port is always allowed so local development works.
+const allowedOrigins = (process.env.CORS_ORIGIN ?? 'https://progen-one.vercel.app')
+  .split(',')
+  .map((o) => o.trim())
+  .filter(Boolean);
+
 app.use(cors({
-  origin: ("https://progen-one.vercel.app"),
+  origin(origin, cb) {
+    if (!origin || /^https?:\/\/localhost(:\d+)?$/.test(origin) || allowedOrigins.includes(origin)) {
+      return cb(null, true);
+    }
+    return cb(null, false);
+  },
   credentials: true,
 }));
 app.use(express.json());
