@@ -1,1 +1,59 @@
-²ø1šYì
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <!-- Background Gradient -->
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#4F46E5" />
+      <stop offset="100%" stop-color="#7C3AED" />
+    </linearGradient>
+
+    <!-- Badge Gradient -->
+    <linearGradient id="accentGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#06B6D4" />
+      <stop offset="100%" stop-color="#2563EB" />
+    </linearGradient>
+
+    <!-- Shadow for Depth -->
+    <filter id="dropShadow" x="-10%" y="-10%" width="130%" height="130%">
+      <feDropShadow dx="0" dy="10" stdDeviation="12" flood-color="#0F172A" flood-opacity="0.25"/>
+    </filter>
+  </defs>
+
+  <!-- Container Squircle -->
+  <rect x="32" y="32" width="448" height="448" rx="108" fill="url(#bgGrad)" />
+
+  <!-- Document Sheet -->
+  <g filter="url(#dropShadow)">
+    <!-- Paper Body -->
+    <path d="M 150 110 
+             H 285 
+             L 360 185 
+             V 385 
+             A 24 24 0 0 1 336 409 
+             H 150 
+             A 24 24 0 0 1 126 385 
+             V 134 
+             A 24 24 0 0 1 150 110 Z" 
+          fill="#FFFFFF" />
+
+    <!-- Paper Corner Fold -->
+    <path d="M 285 110 
+             V 167 
+             A 18 18 0 0 0 303 185 
+             H 360 Z" 
+          fill="#E0E7FF" />
+
+    <!-- Abstract Proposal Layout Lines -->
+    <rect x="170" y="200" width="115" height="22" rx="11" fill="#4F46E5" />
+    <rect x="170" y="242" width="145" height="16" rx="8" stroke="none" fill="#C7D2FE" />
+    <rect x="170" y="274" width="110" height="16" rx="8" stroke="none" fill="#C7D2FE" />
+  </g>
+
+  <!-- Generator / Sparkle Star (Top Right Accent) -->
+  <path d="M 390 85 Q 390 115 420 115 Q 390 115 390 145 Q 390 115 360 115 Q 390 115 390 85 Z" fill="#FDE047" />
+
+  <!-- Success / Deal Badge (Bottom Right Accent) -->
+  <g filter="url(#dropShadow)">
+    <circle cx="345" cy="345" r="58" fill="url(#accentGrad)" />
+    <path d="M 318 345 L 337 364 L 373 326" fill="none" stroke="#FFFFFF" stroke-width="15" stroke-linecap="round" stroke-linejoin="round" />
+  </g>
+</svg>
